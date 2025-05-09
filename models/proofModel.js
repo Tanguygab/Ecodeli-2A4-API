@@ -1,7 +1,7 @@
-const mongoose = require('mongoose');
+import { Schema, model } from 'mongoose';
 
-const proofSchema = new mongoose.Schema({
+const proofSchema = new Schema({
   // TODO: Définir le schéma
 }, { timestamps: true });
 
-module.exports = mongoose.model('Proof', proofSchema);
+export default model('Proof', proofSchema);

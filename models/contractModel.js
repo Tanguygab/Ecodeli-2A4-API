@@ -1,7 +1,7 @@
-const mongoose = require('mongoose');
+import { Schema, model } from 'mongoose';
 
-const contractSchema = new mongoose.Schema({
+const contractSchema = new Schema({
   // TODO: Définir le schéma
 }, { timestamps: true });
 
-module.exports = mongoose.model('Contract', contractSchema);
+export default model('Contract', contractSchema);

@@ -1,7 +1,7 @@
-const mongoose = require('mongoose');
+import { Schema, model } from 'mongoose';
 
-const notificationSchema = new mongoose.Schema({
+const notificationSchema = new Schema({
   // TODO: Définir le schéma
 }, { timestamps: true });
 
-module.exports = mongoose.model('Notification', notificationSchema);
+export default model('Notification', notificationSchema);

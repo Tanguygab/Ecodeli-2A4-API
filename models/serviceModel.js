@@ -1,7 +1,7 @@
-const mongoose = require('mongoose');
+import { Schema, model } from 'mongoose';
 
-const serviceSchema = new mongoose.Schema({
+const serviceSchema = new Schema({
   // TODO: Définir le schéma
 }, { timestamps: true });
 
-module.exports = mongoose.model('Service', serviceSchema);
+export default model('Service', serviceSchema);

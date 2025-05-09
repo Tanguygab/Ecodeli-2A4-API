@@ -1,7 +1,7 @@
-const mongoose = require('mongoose');
+import { Schema, model } from 'mongoose';
 
-const meetingSchema = new mongoose.Schema({
+const meetingSchema = new Schema({
   // TODO: Définir le schéma
 }, { timestamps: true });
 
-module.exports = mongoose.model('Meeting', meetingSchema);
+export default model('Meeting', meetingSchema);

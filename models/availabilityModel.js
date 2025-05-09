@@ -1,7 +1,7 @@
-const mongoose = require('mongoose');
+import { Schema, model } from 'mongoose';
 
-const availabilitySchema = new mongoose.Schema({
+const availabilitySchema = new Schema({
   // TODO: Définir le schéma
 }, { timestamps: true });
 
-module.exports = mongoose.model('Availability', availabilitySchema);
+export default model('Availability', availabilitySchema);

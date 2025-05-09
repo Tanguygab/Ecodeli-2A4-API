@@ -1,7 +1,7 @@
-const mongoose = require('mongoose');
+import { Schema, model } from 'mongoose';
 
-const deliverySchema = new mongoose.Schema({
+const deliverySchema = new Schema({
   // TODO: Définir le schéma
 }, { timestamps: true });
 
-module.exports = mongoose.model('Delivery', deliverySchema);
+export default model('Delivery', deliverySchema);

@@ -1,7 +1,7 @@
-const mongoose = require('mongoose');
+import { Schema, model } from 'mongoose';
 
-const warehouseSchema = new mongoose.Schema({
+const warehouseSchema = new Schema({
   // TODO: Définir le schéma
 }, { timestamps: true });
 
-module.exports = mongoose.model('Warehouse', warehouseSchema);
+export default model('Warehouse', warehouseSchema);

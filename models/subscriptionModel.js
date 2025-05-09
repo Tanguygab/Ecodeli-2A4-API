@@ -1,7 +1,7 @@
-const mongoose = require('mongoose');
+import { Schema, model } from 'mongoose';
 
-const subscriptionSchema = new mongoose.Schema({
+const subscriptionSchema = new Schema({
   // TODO: Définir le schéma
 }, { timestamps: true });
 
-module.exports = mongoose.model('Subscription', subscriptionSchema);
+export default model('Subscription', subscriptionSchema);
