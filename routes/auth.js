@@ -13,8 +13,8 @@ router.post('/login', async (req, res) => {
     }
     const salt = await genSalt()
     const token = await hash(req.body.username + req.body.password, salt)
-    console.log(user, simpleUser(user))
-    await User.updateOne({ _id: user._id }, { token: token })
+    
+    await User.updateOne({ _id: user._id }, { token: token }, {})
     res.json({ token: token, user: simpleUser(user) })
 })
 
