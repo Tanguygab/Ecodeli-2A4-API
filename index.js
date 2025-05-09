@@ -14,9 +14,9 @@ mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
-.then(() => console.log('✅ MongoDB connecté'))
+.then(() => console.log('✅ MongoDB connected'))
 .catch((err) => {
-  console.error('❌ Erreur MongoDB :', err);
+  console.error('❌ MongoDB Error:', err);
   process.exit(1);
 });
 
@@ -26,11 +26,11 @@ app.use('/api/roles', require('./routes/roleRoutes'));
 app.use('/api/user_roles', require('./routes/user_roleRoutes'));
 app.use('/api/contracts', require('./routes/contractRoutes'));
 app.use('/api/user_contracts', require('./routes/user_contractRoutes'));
-app.use('/api/availabilitys', require('./routes/availabilityRoutes'));
-app.use('/api/user_availabilitys', require('./routes/user_availabilityRoutes'));
+app.use('/api/availabilities', require('./routes/availabilityRoutes'));
+app.use('/api/user_availabilities', require('./routes/user_availabilityRoutes'));
 app.use('/api/proofs', require('./routes/proofRoutes'));
 app.use('/api/user_proofs', require('./routes/user_proofRoutes'));
-app.use('/api/deliverymans', require('./routes/deliverymanRoutes'));
+app.use('/api/deliverymen', require('./routes/deliverymanRoutes'));
 app.use('/api/sellers', require('./routes/sellerRoutes'));
 app.use('/api/receivers', require('./routes/receiverRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
@@ -47,9 +47,9 @@ app.use('/api/products', require('./routes/productRoutes'));
 app.use('/api/product_sizes', require('./routes/product_sizeRoutes'));
 app.use('/api/product_locations', require('./routes/product_locationRoutes'));
 app.use('/api/product_requests', require('./routes/product_requestRoutes'));
-app.use('/api/product_requesteds', require('./routes/product_requestedRoutes'));
-app.use('/api/product_deliverys', require('./routes/product_deliveryRoutes'));
-app.use('/api/product_delivery_statuss', require('./routes/product_delivery_statusRoutes'));
+app.use('/api/products_requested', require('./routes/product_requestedRoutes'));
+app.use('/api/product_deliveries', require('./routes/product_deliveryRoutes'));
+app.use('/api/product_delivery_statuses', require('./routes/product_delivery_statusRoutes'));
 app.use('/api/subscriptions', require('./routes/subscriptionRoutes'));
 app.use('/api/user_subscriptions', require('./routes/user_subscriptionRoutes'));
 app.use('/api/user_locations', require('./routes/user_locationRoutes'));
@@ -58,14 +58,14 @@ app.use('/api/permanent_reduction_package_sizes', require('./routes/permanent_re
 app.use('/api/warehouses', require('./routes/warehouseRoutes'));
 app.use('/api/warehouse_locations', require('./routes/warehouse_locationRoutes'));
 app.use('/api/back_to_warehouses', require('./routes/back_to_warehouseRoutes'));
-app.use('/api/deliverys', require('./routes/deliveryRoutes'));
+app.use('/api/deliveries', require('./routes/deliveryRoutes'));
 app.use('/api/delivery_locations', require('./routes/delivery_locationRoutes'));
-app.use('/api/delivery_statuss', require('./routes/delivery_statusRoutes'));
+app.use('/api/delivery_statuses', require('./routes/delivery_statusRoutes'));
 
 app.get('/', (req, res) => {
-  res.send('🚀 API Express + MongoDB prête');
+  res.send('🚀 API Express + MongoDB ready');
 });
 
 // Lancer le serveur
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🌐 Serveur lancé sur http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`🌐 Server launched on http://localhost:${PORT}`));
