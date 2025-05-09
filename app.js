@@ -17,11 +17,12 @@ connect(`mongodb://localhost:${process.env.MONGO_PORT}/${process.env.MONGO_DB}`)
   .then(() => console.log("✅ MongoDB connected"))
   .catch(err => console.error("❌ MongoDB Error:", err));
 
-// === Routes API ===
+// API Routes
 async function useRoute(route) {
   router.use("/" + route, (await import(`./routes/${route}.js`)).default)
 }
 
+useRoute("auth")
 useRoute("users")
 useRoute("contracts")
 useRoute("proofs")
