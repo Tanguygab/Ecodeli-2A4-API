@@ -1,7 +1,7 @@
 import create from './model.js'
 
 export default create("services", {
-    id: Number,
+    _id: Number,
     creation_date: Date,
     date: Date,
     name: String,

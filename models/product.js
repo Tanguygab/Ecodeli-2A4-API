@@ -1,7 +1,7 @@
 import create from './model.js'
 
 export default create("products", {
-    id: Number,
+    _id: Number,
     name: String,
     price: Number,
     size: {type: Number, ref: "packageSizes"},

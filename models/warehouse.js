@@ -1,7 +1,7 @@
 import create from './model.js'
 
 export default create("warehouses", {
-    id: Number,
+    _id: Number,
     location: {type: Number, ref: "locations"},
     name: String
 })

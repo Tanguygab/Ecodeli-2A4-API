@@ -1,7 +1,7 @@
 import create from './model.js'
 
 export default create("productRequests", {
-    id: Number,
+    _id: Number,
     creation_date: Date,
     date: Date,
     accepted_date: Date,

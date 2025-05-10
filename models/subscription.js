@@ -1,7 +1,7 @@
 import create from './model.js'
 
 export default create("subscriptions", {
-    id: Number,
+    _id: Number,
     name: String,
     price: Number,
     assurance_max: Number,
