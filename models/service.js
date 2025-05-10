@@ -1,3 +1,12 @@
 import create from './model.js'
 
-export default create("services", {})
+export default create("services", {
+    id: Number,
+    creation_date: Date,
+    date: Date,
+    name: String,
+    description: String,
+    price: Number,
+    user: {type: Number, ref: "users"},
+    actor: {type: Number, ref: "users"}
+})

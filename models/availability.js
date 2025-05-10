@@ -1,3 +1,8 @@
 import create from './model.js'
 
-export default create("availabilities", {})
+export default create("availabilities", {
+    id: Number,
+    user: {type: Number, ref: "users"},
+    from_time: Date,
+    to_time: Date
+})
