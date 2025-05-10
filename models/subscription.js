@@ -3,6 +3,7 @@ import create from './model.js'
 export default create("subscriptions", {
     _id: Number,
     name: String,
+    color: String,
     price: Number,
     assurance_max: Number,
     assurance_bonus: Number,
