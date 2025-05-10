@@ -2,11 +2,12 @@ import Router from 'express'
 const router = Router()
 import User, { simpleUser } from '../models/user.js'
 import Role from '../models/role.js'
+import Subscription from '../models/subscription.js'
 import { compare, genSalt, hash } from 'bcrypt'
 import { error, getLastId, validToken, invalidString } from '../utils.js'
 
 router.post('/login', async (req, res) => {
-    const user = await (await User.findOne({ email: req.body.email })).populate("role", "id name access_level")
+    const user = await User.findOne({ email: req.body.email }).populate("role")
     if (user === null || !await compare(req.body.password, user.password)) {
         error(res, "invalid-credentials")
         return
@@ -60,7 +61,8 @@ router.post('/register', async (req, res) => {
         description: "",
         tutorial: false,
         approved: false,
-        role: await Role.findOne({ name: "user" })
+        role: await Role.findOne({ name: "user" }),
+        subscription: await Subscription.findOne({ name: "free" })
     })
     res.json()
 })
