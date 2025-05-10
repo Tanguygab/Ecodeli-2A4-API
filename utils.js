@@ -12,7 +12,8 @@ export function error(response, error, statusCode = 400) {
 export async function validToken(request, response) {
     const auth = request.headers?.authorization?.split(" ");
     let user;
-    if (auth !== undefined && auth.length === 2 && auth[0] === "Bearer" && (user = await User.findOne({ token: auth[1] })) !== null) return user;
+    if (auth !== undefined && auth.length === 2 && auth[0] === "Bearer"
+        && (user = await User.findOne({ token: auth[1] }).populate("role").populate("subscription")) !== null) return user;
 
     error(response, "Invalid Token", 401)
     return null;

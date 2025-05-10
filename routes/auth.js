@@ -7,7 +7,7 @@ import { compare, genSalt, hash } from 'bcrypt'
 import { error, getLastId, validToken, invalidString } from '../utils.js'
 
 router.post('/login', async (req, res) => {
-    const user = await User.findOne({ email: req.body.email }).populate("role")
+    const user = await User.findOne({ email: req.body.email }).populate("role").populate("subscription")
     if (user === null || !await compare(req.body.password, user.password)) {
         error(res, "invalid-credentials")
         return
@@ -29,7 +29,7 @@ router.post('/logout', async (req, res) => {
 
 router.post('/valid', async (req, res) => {
     const user = await validToken(req, res)
-    if (user !== null) res.json({user: await user.populate("role", "id name access_level")})
+    if (user !== null) res.json({user: user})
 })
 
 router.post('/register', async (req, res) => {
