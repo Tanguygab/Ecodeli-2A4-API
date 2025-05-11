@@ -1,10 +1,51 @@
 import { Router } from 'express';
+import Product from '../models/product.js';
+import { error, getLastId } from '../utils.js';
 const router = Router();
 
-router.get('/', (req, res) => { res.json({ message: 'GET all products' }); });
-router.get('/:id', (req, res) => { res.json({ message: `GET product by ID: ${req.params.id}` }); });
-router.post('/', (req, res) => { res.json({ message: 'CREATE product' }); });
-router.put('/:id', (req, res) => { res.json({ message: `UPDATE product ID: ${req.params.id}` }); });
-router.delete('/:id', (req, res) => { res.json({ message: `DELETE product ID: ${req.params.id}` }); });
+router.get('/', async (req, res) => {
+  const items = await Product.find();
+  res.json(items);
+});
+
+router.get('/:id', async (req, res) => {
+  const item = await Product.findOne({ _id: req.params.id })
+    .populate('size')
+    .populate('seller')
+    .populate('location');
+  if (!item) {
+    error(res, 'product.not-found', 404);
+    return;
+  }
+  res.json(item);
+});
+
+router.post('/', async (req, res) => {
+  const newId = await getLastId(Product) + 1;
+  const item = await Product.create({ _id: newId, ...req.body });
+  res.json(item);
+});
+
+router.put('/:id', async (req, res) => {
+  const item = await Product.findOneAndUpdate(
+    { _id: req.params.id },
+    req.body,
+    { new: true }
+  );
+  if (!item) {
+    error(res, 'product.not-found', 404);
+    return;
+  }
+  res.json(item);
+});
+
+router.delete('/:id', async (req, res) => {
+  const item = await Product.findOneAndDelete({ _id: req.params.id });
+  if (!item) {
+    error(res, 'product.not-found', 404);
+    return;
+  }
+  res.json();
+});
 
 export default router;

@@ -1,10 +1,49 @@
 import { Router } from 'express';
+import Contract from '../models/contract.js';
+import { error, getLastId } from '../utils.js';
 const router = Router();
 
-router.get('/', (req, res) => { res.json({ message: 'GET all contracts' }); });
-router.get('/:id', (req, res) => { res.json({ message: `GET contract by ID: ${req.params.id}` }); });
-router.post('/', (req, res) => { res.json({ message: 'CREATE contract' }); });
-router.put('/:id', (req, res) => { res.json({ message: `UPDATE contract ID: ${req.params.id}` }); });
-router.delete('/:id', (req, res) => { res.json({ message: `DELETE contract ID: ${req.params.id}` }); });
+router.get('/', async (req, res) => {
+  const items = await Contract.find();
+  res.json(items);
+});
+
+router.get('/:id', async (req, res) => {
+  const item = await Contract.findOne({ _id: req.params.id })
+    .populate('user');
+  if (!item) {
+    error(res, 'contract.not-found', 404);
+    return;
+  }
+  res.json(item);
+});
+
+router.post('/', async (req, res) => {
+  const newId = await getLastId(Contract) + 1;
+  const item = await Contract.create({ _id: newId, ...req.body });
+  res.json(item);
+});
+
+router.put('/:id', async (req, res) => {
+  const item = await Contract.findOneAndUpdate(
+    { _id: req.params.id },
+    req.body,
+    { new: true }
+  );
+  if (!item) {
+    error(res, 'contract.not-found', 404);
+    return;
+  }
+  res.json(item);
+});
+
+router.delete('/:id', async (req, res) => {
+  const item = await Contract.findOneAndDelete({ _id: req.params.id });
+  if (!item) {
+    error(res, 'contract.not-found', 404);
+    return;
+  }
+  res.json();
+});
 
 export default router;
