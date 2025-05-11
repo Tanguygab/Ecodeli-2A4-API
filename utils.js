@@ -23,9 +23,9 @@ export function invalidString(string) {
     return string === undefined || string === null || string === "";
 }
 
-export function searchQuery(request, option = "name") {
-    const string = request.query[option];
+export function searchQuery(request, query = "name", field = "name") {
+    const string = request.query[query];
     const options = {};
-    if (!invalidString(string)) options[option] = { $regex: "(?i)" + string.trim() };
+    if (!invalidString(string)) options[field] = { $regex: "(?i)" + string.trim() };
     return options;
 }
