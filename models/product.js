@@ -6,5 +6,5 @@ export default create("products", {
     price: Number,
     size: {type: Number, ref: "packageSizes"},
     seller: {type: Number, ref: "users"},
-    location: Location
+    location: {type: Number, ref: "locations"}
 })
