@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import Product from '../models/product.js';
-import { error, getLastId } from '../utils.js';
+import { error, getLastId, searchQuery } from '../utils.js'
+import User from '../models/user.js'
 const router = Router();
 
 router.get('/', async (req, res) => {
@@ -19,6 +20,10 @@ router.get('/:id', async (req, res) => {
   }
   res.json(item);
 });
+
+router.get('/sellers', async (req, res) => {
+    res.json(await User.find({$or: [searchQuery(req, "input"), searchQuery(req, "input", "firstname")]}, {_id: 1, firstname: 1, name: 1}))
+})
 
 router.post('/', async (req, res) => {
   const newId = await getLastId(Product) + 1;
