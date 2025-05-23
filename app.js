@@ -10,6 +10,7 @@ const router = express.Router()
 // Middleware
 app.use(json());
 app.use(cors());
+app.use(express.static('public'))
 app.use("/api", router)
 
 // MongoDB Connection
