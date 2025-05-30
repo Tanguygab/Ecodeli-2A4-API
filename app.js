@@ -18,21 +18,22 @@ connect(`mongodb://localhost:${process.env.MONGO_PORT}/${process.env.MONGO_DB}`)
   .then(() => console.log("✅ MongoDB connected"))
   .catch(err => console.error("❌ MongoDB Error:", err));
 
-// API Routes
-async function useRoute(route) {
-  router.use("/" + route, (await import(`./routes/${route}.js`)).default)
-}
+import fs from 'fs';
 
-useRoute("auth")
-useRoute("users")
-useRoute("contracts")
-useRoute("proofs")
-useRoute("bills")
-useRoute("services")
-useRoute("meetings")
-useRoute("products")
-useRoute("warehouses")
-useRoute("deliveries")
+// Mongo Schemas
+fs.readdir("./models", (err, files) => {
+  for (const file of files) {
+    import(`./models/` + file)
+  }
+})
+
+// API Routes
+fs.readdir("./routes", async (err, files) => {
+  for (const file of files) {
+    router.use("/" + file.substring(0, file.length - 3), (await import(`./routes/` + file)).default)
+  }
+})
+
 
 // Server Launch
 const PORT = process.env.PORT || 3000;

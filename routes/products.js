@@ -5,7 +5,10 @@ import User from '../models/user.js'
 const router = Router();
 
 router.get('/', async (req, res) => {
-  const items = await Product.find();
+  const items = await Product.find()
+    .populate('size')
+    .populate('seller')
+    .populate('location');
   res.json(items);
 });
 

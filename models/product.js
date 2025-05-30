@@ -4,7 +4,7 @@ export default create("products", {
     _id: Number,
     name: String,
     price: Number,
-    size: {type: Number, ref: "packageSizes"},
+    size: {type: Number, ref: "package_sizes"},
     seller: {type: Number, ref: "users"},
     location: {type: Number, ref: "locations"}
 })
