@@ -3,7 +3,7 @@ const router = Router()
 import User, { simpleUser } from '../models/user.js'
 import Role from '../models/role.js'
 import Subscription from '../models/subscription.js'
-import { compare, genSalt, hash } from 'bcrypt'
+import { compare, genSalt, hash } from 'bcryptjs'
 import { error, getLastId, validToken, invalidString } from '../utils.js'
 
 router.post('/login', async (req, res) => {
