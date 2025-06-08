@@ -2,3 +2,5 @@
 node_modules
 Dockerfile
 .env
+.gitignore
+publish-docker.sh
