@@ -12,13 +12,13 @@ app.use(express.static('public'))
 app.use("/api", router)
 
 // MongoDB Connection
-connect(`mongodb://localhost:${process.env.DB_PORT}/${process.env.DB_NAME}`)
+connect(`mongodb://db:${process.env.DB_PORT}/${process.env.DB_NAME}`)
   .then(() => {
     console.log("✅ MongoDB connected")
 
     // Server Launch
     const PORT = process.env.PORT;
-    app.listen(PORT, () => console.log(`🌐 Server launched on http://localhost:${PORT}`));
+    app.listen(PORT, () => console.log(`🌐 Server launched on http://api:${PORT}`));
 
   })
   .catch(err => console.error("❌ MongoDB Error:", err));
