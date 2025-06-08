@@ -18,7 +18,7 @@ connect(`mongodb://db:${process.env.DB_PORT}/${process.env.DB_NAME}`)
 
     // Server Launch
     const PORT = process.env.PORT;
-    app.listen(PORT, () => console.log(`🌐 Server launched on http://api:${PORT}`));
+    app.listen(PORT, () => console.log(`🌐 Server launched on http://localhost:${PORT}`));
 
   })
   .catch(err => console.error("❌ MongoDB Error:", err));
