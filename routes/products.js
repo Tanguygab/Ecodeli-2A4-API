@@ -1,21 +1,19 @@
 import { Router } from 'express';
 import Product from '../models/product.js';
 import { error, getLastId, searchQuery } from '../utils.js'
-import User from '../models/user.js'
+import User, { populateUser } from '../models/user.js'
 const router = Router();
 
 router.get('/', async (req, res) => {
-  const items = await Product.find()
+  const items = await populateUser(Product.find(), "seller")
     .populate('size')
-    .populate('seller')
     .populate('location');
   res.json(items);
 });
 
 router.get('/:id', async (req, res) => {
-  const item = await Product.findOne({ _id: req.params.id })
+  const item = await populateUser(Product.findOne({ _id: req.params.id }), "seller")
     .populate('size')
-    .populate('seller')
     .populate('location');
   if (!item) {
     error(res, 'product.not-found', 404);

@@ -27,3 +27,7 @@ export function simpleUser(user) {
         role: user.role
     }
 }
+
+export function populateUser(request, field = "user") {
+    return request.populate(field, "_id firstname name email description join_date role")
+}

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import Bill from '../models/bill.js';
 import { error, getLastId } from '../utils.js';
+import { populateUser } from '../models/user.js'
 const router = Router();
 
 router.get('/', async (req, res) => {
@@ -9,9 +10,7 @@ router.get('/', async (req, res) => {
 });
 
 router.get('/:id', async (req, res) => {
-  const item = await Bill.findOne({ _id: req.params.id })
-    .populate('buyer')
-    .populate('receiver');
+  const item = await populateUser(populateUser(Bill.findOne({ _id: req.params.id }), "buyer"), 'receiver');
   if (!item) {
     error(res, 'bill.not-found', 404);
     return;

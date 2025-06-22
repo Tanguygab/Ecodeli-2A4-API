@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import Service from '../models/service.js';
 import { error, getLastId } from '../utils.js';
+import { populateUser } from '../models/user.js'
 const router = Router();
 
 router.get('/', async (req, res) => {
@@ -9,9 +10,7 @@ router.get('/', async (req, res) => {
 });
 
 router.get('/:id', async (req, res) => {
-  const item = await Service.findOne({ _id: req.params.id })
-    .populate('user')
-    .populate('actor');
+  const item = await populateUser(populateUser(Service.findOne({ _id: req.params.id })),'actor');
   if (!item) {
     error(res, 'service.not-found', 404);
     return;

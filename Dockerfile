@@ -7,7 +7,7 @@ WORKDIR /app
 # Copie du code dans le dossier
 COPY . .
 
-# Port 5173 ouvert
+# Port 3000 ouvert
 EXPOSE 3000
 
 # Commande lorsque l'app se lance

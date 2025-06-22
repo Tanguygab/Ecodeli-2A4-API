@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import Notification from '../models/notification.js';
 import { error, getLastId } from '../utils.js';
+import { populateUser } from '../models/user.js'
 const router = Router();
 
 router.get('/', async (req, res) => {
@@ -9,8 +10,7 @@ router.get('/', async (req, res) => {
 });
 
 router.get('/:id', async (req, res) => {
-  const item = await Notification.findOne({ _id: req.params.id })
-    .populate('user');
+  const item = await populateUser(Notification.findOne({ _id: req.params.id }));
   if (!item) {
     error(res, 'notification.not-found', 404);
     return;
