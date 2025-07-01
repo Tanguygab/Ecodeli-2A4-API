@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import Product from '../models/product.js';
-import { error, getLastId, searchQuery } from '../utils.js'
+import { error, find, getLastId, searchQuery, validToken } from '../utils.js'
 import User, { populateUser } from '../models/user.js'
+import ProductRequest from '../models/product_request.js'
+import Location from '../models/location.js'
 const router = Router();
 
 router.get('/', async (req, res) => {
@@ -29,6 +31,27 @@ router.get('/sellers', async (req, res) => {
 router.post('/', async (req, res) => {
   const newId = await getLastId(Product) + 1;
   const item = await Product.create({ _id: newId, ...req.body });
+  res.json(item);
+});
+
+router.post('/:id/buy', async (req, res) => {
+  const user = await validToken(req, res);
+  if (user === null) return;
+
+  const product = await find(res, Product, req.params.id, "product.not-found");
+  if (product === null) return;
+
+  const location = await find(res, Location, req.body.location, "location.not-found");
+  if (location === null) return;
+
+  const item = await ProductRequest.create({
+    _id: await getLastId(ProductRequest) + 1,
+    creation_date: Date.now(),
+    delivery_location: location._id,
+    receiver: user._id,
+    product: product._id,
+    amount: req.body.amount,
+  });
   res.json(item);
 });
 

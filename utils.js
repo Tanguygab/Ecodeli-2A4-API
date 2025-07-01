@@ -1,4 +1,5 @@
 import User from "./models/user.js";
+import Product from './models/product.js'
 
 export async function getLastId(model) {
     const lastId = await model.findOne().sort({ _id: -1 });
@@ -7,6 +8,15 @@ export async function getLastId(model) {
 
 export function error(response, error, statusCode = 400) {
     response.status(statusCode).json({error: "error." + error});
+}
+
+export async function find(res, model, id, errorMsg) {
+    const found = await model.findOne({_id: id});
+    if (found === null) {
+        error(res, errorMsg, 404);
+        return null;
+    }
+    return found;
 }
 
 export async function validToken(request, response) {

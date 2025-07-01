@@ -9,6 +9,7 @@ export default create("product_requests", {
     delivery_location: {type: Number, ref: "locations"},
     receiver: {type: Number, ref: "users"},
     product: {type: Number, ref: "products"},
+    amount: Number,
     delivery: {type: Number, ref: "deliveries"},
     delivery_status: {type: Number, ref: "deliveryStatuses"},
     back_to_ware_house: {type: Number, ref: "warehouses"}
