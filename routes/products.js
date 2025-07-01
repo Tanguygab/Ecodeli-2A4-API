@@ -13,6 +13,18 @@ router.get('/', async (req, res) => {
   res.json(items);
 });
 
+router.get('/sellers', async (req, res) => {
+  res.json(await User.find({$or: [searchQuery(req, "input"), searchQuery(req, "input", "firstname")]}, {_id: 1, firstname: 1, name: 1}))
+})
+
+router.get('/requests', async (req, res) => {
+  const user = await validToken(req, res);
+  if (user === null) return;
+
+  const item = await ProductRequest.find({receiver: user._id}).populate("product");
+  res.json(item);
+});
+
 router.get('/:id', async (req, res) => {
   const item = await populateUser(Product.findOne({ _id: req.params.id }), "seller")
     .populate('size')
@@ -24,9 +36,27 @@ router.get('/:id', async (req, res) => {
   res.json(item);
 });
 
-router.get('/sellers', async (req, res) => {
-    res.json(await User.find({$or: [searchQuery(req, "input"), searchQuery(req, "input", "firstname")]}, {_id: 1, firstname: 1, name: 1}))
-})
+router.get('/requests/:id', async (req, res) => {
+  const item = (await populateUser(ProductRequest.findOne({ _id: req.params.id }), "receiver")
+    .populate('delivery_location')
+    .populate({
+      path: 'product',
+      populate: [
+        {
+          path: 'size'
+        },
+        {
+          path: 'seller',
+          select: "_id firstname name email description join_date role"
+        }
+      ]
+    }));
+  if (!item) {
+    error(res, 'product.not-found', 404);
+    return;
+  }
+  res.json(item);
+});
 
 router.post('/', async (req, res) => {
   const newId = await getLastId(Product) + 1;
