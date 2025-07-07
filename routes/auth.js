@@ -56,7 +56,7 @@ router.post('/register', async (req, res) => {
         name: name,
         email: email,
         password: password,
-        join_date: Date.now(),
+        join_date: new Date(),
         birthday: birthday,
         description: "",
         tutorial: false,

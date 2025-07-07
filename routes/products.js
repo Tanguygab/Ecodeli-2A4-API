@@ -76,7 +76,7 @@ router.post('/:id/buy', async (req, res) => {
 
   const item = await ProductRequest.create({
     _id: await getLastId(ProductRequest) + 1,
-    creation_date: Date.now(),
+    creation_date: new Date(),
     delivery_location: location._id,
     receiver: user._id,
     product: product._id,

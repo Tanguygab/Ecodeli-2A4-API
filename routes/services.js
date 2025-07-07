@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import Service from '../models/service.js';
-import { error, getLastId } from '../utils.js';
+import { error, find, getLastId, validToken } from '../utils.js'
 import { populateUser } from '../models/user.js'
+import Location from '../models/location.js'
 const router = Router();
 
 router.get('/', async (req, res) => {
@@ -19,8 +20,21 @@ router.get('/:id', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const newId = await getLastId(Service) + 1;
-  const item = await Service.create({ _id: newId, ...req.body });
+  const user = await validToken(req, res);
+  if (user === null) return;
+
+  const location = await find(res, Location, req.body.location, "location.not-found");
+  if (location === null) return;
+
+  const item = await Service.create({
+    _id: await getLastId(Service) + 1,
+    creation_date: new Date(),
+    date: req.body.date,
+    name: req.body.name,
+    description: req.body.description,
+    price: req.body.price,
+    user: user._id,
+  });
   res.json(item);
 });
 
