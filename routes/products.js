@@ -4,6 +4,7 @@ import { error, find, getLastId, searchQuery, validToken } from '../utils.js'
 import User, { populateUser } from '../models/user.js'
 import ProductRequest from '../models/product_request.js'
 import Location from '../models/location.js'
+import Delivery from '../models/delivery.js'
 const router = Router();
 
 router.get('/', async (req, res) => {
@@ -66,6 +67,7 @@ router.get('/requests/:id', async (req, res) => {
   try {
     const item = await populateUser(ProductRequest.findOne({ _id: req.params.id }), "receiver")
       .populate('delivery_location')
+      .populate('delivery')
       .populate({
         path: 'product',
         populate: [
@@ -87,6 +89,28 @@ router.get('/requests/:id', async (req, res) => {
     console.error('Error getting product request:', err);
     error(res, "database-error", 500);
   }
+});
+
+router.post('/requests/:id/accept', async (req, res) => {
+  const user = await validToken(req, res);
+  if (user === null || user.role.name !== 'deliveryman') return;
+  const request = await ProductRequest.findOne({ _id: req.params.id });
+  if (request === null) {
+    error(res, 'product-request.not-found', 404);
+    return;
+  }
+  if (request.delivery !== null) {
+    error(res, 'product-request.already-assigned', 404);
+    return;
+  }
+  const delivery = await Delivery.findOne({ _id: req.body.delivery, deliveryman: user._id });
+  if (delivery === null) {
+    error(res, 'delivery.not-found', 404);
+    return;
+  }
+
+  await ProductRequest.updateOne({ _id: req.params.id }, { delivery: delivery._id })
+  res.json("request.accepted");
 });
 
 router.post('/', async (req, res) => {
