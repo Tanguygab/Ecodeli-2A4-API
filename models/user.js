@@ -4,6 +4,7 @@ export default create("users", {
     _id: Number,
     firstname: String,
     name: String,
+    image: String,
     email: String,
     password: String,
     token: String,
@@ -21,6 +22,7 @@ export function simpleUser(user) {
         _id: user._id,
         firstname: user.firstname,
         name: user.name,
+        image: user.image,
         email: user.email,
         description: user.description,
         join_date: user.join_date,
@@ -29,5 +31,5 @@ export function simpleUser(user) {
 }
 
 export function populateUser(request, field = "user") {
-    return request.populate(field, "_id firstname name email description join_date role")
+    return request.populate(field, "_id firstname name image email description join_date role")
 }
