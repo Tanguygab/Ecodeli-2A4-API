@@ -39,7 +39,7 @@ router.post('/logout', async (req, res) => {
 
 router.post('/valid', async (req, res) => {
     const user = await validToken(req, res)
-    if (user !== null) res.json({user: simpleUser(user)})
+    if (user !== null) res.json({user: user})
 })
 
 router.post('/register', async (req, res) => {
