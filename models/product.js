@@ -3,6 +3,7 @@ import create from './model.js'
 export default create("products", {
     _id: Number,
     name: String,
+    image: String,
     price: Number,
     size: {type: Number, ref: "package_sizes"},
     seller: {type: Number, ref: "users"},

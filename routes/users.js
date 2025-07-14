@@ -4,7 +4,7 @@ import { error, getLastId } from '../utils.js';
 const router = Router();
 
 router.get('/', async (req, res) => {
-  const items = await User.find();
+  const items = await User.find({}, "_id firstname name image email description join_date role");
   res.json(items);
 });
 
