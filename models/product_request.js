@@ -11,6 +11,6 @@ export default create("product_requests", {
     product: {type: Number, ref: "products"},
     amount: Number,
     delivery: {type: Number, ref: "deliveries"},
-    delivery_status: {type: Number, ref: "deliveryStatuses"},
+    delivery_status: {type: Number, ref: "delivery_Statuses"},
     back_to_ware_house: {type: Number, ref: "warehouses"}
 })
