@@ -7,104 +7,175 @@ import Location from '../models/location.js'
 const router = Router();
 
 router.get('/', async (req, res) => {
-  const items = await populateUser(Product.find(), "seller")
-    .populate('size')
-    .populate('location');
-  res.json(items);
+  try {
+    const items = await populateUser(Product.find(), "seller")
+      .populate('size')
+      .populate('location');
+    res.json(items);
+  } catch (err) {
+    console.error('Error getting products:', err);
+    error(res, "database-error", 500);
+  }
 });
 
 router.get('/sellers', async (req, res) => {
-  res.json(await User.find({$or: [searchQuery(req, "input"), searchQuery(req, "input", "firstname")]}, {_id: 1, firstname: 1, name: 1}))
-})
+  try {
+    const sellers = await User.find({
+      $or: [
+        searchQuery(req, "input"), 
+        searchQuery(req, "input", "firstname")
+      ]
+    }, {_id: 1, firstname: 1, name: 1});
+    res.json(sellers);
+  } catch (err) {
+    console.error('Error getting sellers:', err);
+    error(res, "database-error", 500);
+  }
+});
 
 router.get('/requests', async (req, res) => {
   const user = await validToken(req, res);
   if (user === null) return;
 
-  const item = await ProductRequest.find({receiver: user._id}).populate("product");
-  res.json(item);
+  try {
+    const requests = await ProductRequest.find({receiver: user._id}).populate("product");
+    res.json(requests);
+  } catch (err) {
+    console.error('Error getting product requests:', err);
+    error(res, "database-error", 500);
+  }
 });
 
 router.get('/:id', async (req, res) => {
-  const item = await populateUser(Product.findOne({ _id: req.params.id }), "seller")
-    .populate('size')
-    .populate('location');
-  if (!item) {
-    error(res, 'product.not-found', 404);
-    return;
+  try {
+    const item = await populateUser(Product.findOne({ _id: req.params.id }), "seller")
+      .populate('size')
+      .populate('location');
+    if (!item) {
+      error(res, 'product.not-found', 404);
+      return;
+    }
+    res.json(item);
+  } catch (err) {
+    console.error('Error getting product:', err);
+    error(res, "database-error", 500);
   }
-  res.json(item);
 });
 
 router.get('/requests/:id', async (req, res) => {
-  const item = (await populateUser(ProductRequest.findOne({ _id: req.params.id }), "receiver")
-    .populate('delivery_location')
-    .populate({
-      path: 'product',
-      populate: [
-        {
-          path: 'size'
-        },
-        {
-          path: 'seller',
-          select: "_id firstname name email description join_date role"
-        }
-      ]
-    }));
-  if (!item) {
-    error(res, 'product.not-found', 404);
-    return;
+  try {
+    const item = await populateUser(ProductRequest.findOne({ _id: req.params.id }), "receiver")
+      .populate('delivery_location')
+      .populate({
+        path: 'product',
+        populate: [
+          {
+            path: 'size'
+          },
+          {
+            path: 'seller',
+            select: "_id firstname name email description join_date role"
+          }
+        ]
+      });
+    if (!item) {
+      error(res, 'product-request.not-found', 404);
+      return;
+    }
+    res.json(item);
+  } catch (err) {
+    console.error('Error getting product request:', err);
+    error(res, "database-error", 500);
   }
-  res.json(item);
 });
 
 router.post('/', async (req, res) => {
-  const newId = await getLastId(Product) + 1;
-  const item = await Product.create({ _id: newId, ...req.body });
-  res.json(item);
+  const user = await validToken(req, res);
+  if (user === null) return;
+
+  try {
+    const newId = await getLastId(Product) + 1;
+    const productData = {
+      _id: newId,
+      name: req.body.name,
+      price: req.body.price,
+      size: req.body.size,
+      seller: user._id,
+      location: req.body.location
+    };
+    
+    const item = await Product.create(productData);
+    res.json(item);
+  } catch (err) {
+    console.error('Error creating product:', err);
+    error(res, "creation-failed", 500);
+  }
 });
 
 router.post('/:id/buy', async (req, res) => {
   const user = await validToken(req, res);
   if (user === null) return;
 
-  const product = await find(res, Product, req.params.id, "product.not-found");
-  if (product === null) return;
+  try {
+    const product = await find(res, Product, req.params.id, "product.not-found");
+    if (product === null) return;
 
-  const location = await find(res, Location, req.body.location, "location.not-found");
-  if (location === null) return;
+    const location = await find(res, Location, req.body.location, "location.not-found");
+    if (location === null) return;
 
-  const item = await ProductRequest.create({
-    _id: await getLastId(ProductRequest) + 1,
-    creation_date: new Date(),
-    delivery_location: location._id,
-    receiver: user._id,
-    product: product._id,
-    amount: req.body.amount,
-  });
-  res.json(item);
+    const newId = await getLastId(ProductRequest) + 1;
+    const item = await ProductRequest.create({
+      _id: newId,
+      creation_date: new Date(),
+      delivery_location: location._id,
+      receiver: user._id,
+      product: product._id,
+      amount: req.body.amount,
+      delivery_status: 1
+    });
+    res.json(item);
+  } catch (err) {
+    console.error('Error creating product request:', err);
+    error(res, "creation-failed", 500);
+  }
 });
 
 router.put('/:id', async (req, res) => {
-  const item = await Product.findOneAndUpdate(
-    { _id: req.params.id },
-    req.body,
-    { new: true }
-  );
-  if (!item) {
-    error(res, 'product.not-found', 404);
-    return;
+  const user = await validToken(req, res);
+  if (user === null) return;
+
+  try {
+    const item = await Product.findOneAndUpdate(
+      { _id: req.params.id },
+      req.body,
+      { new: true }
+    );
+    if (!item) {
+      error(res, 'product.not-found', 404);
+      return;
+    }
+    res.json(item);
+  } catch (err) {
+    console.error('Error updating product:', err);
+    error(res, "update-failed", 500);
   }
-  res.json(item);
 });
 
 router.delete('/:id', async (req, res) => {
-  const item = await Product.findOneAndDelete({ _id: req.params.id });
-  if (!item) {
-    error(res, 'product.not-found', 404);
-    return;
+  const user = await validToken(req, res);
+  if (user === null) return;
+
+  try {
+    const item = await Product.findOneAndDelete({ _id: req.params.id });
+    if (!item) {
+      error(res, 'product.not-found', 404);
+      return;
+    }
+    res.json();
+  } catch (err) {
+    console.error('Error deleting product:', err);
+    error(res, "deletion-failed", 500);
   }
-  res.json();
 });
 
 export default router;
