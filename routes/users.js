@@ -69,6 +69,10 @@ router.put('/:id', upload.single('image'), async (req, res) => {
     notifications: req.body.notifications === 'true' || req.body.notifications === true,
   }
   
+  if (req.body.role !== undefined) {
+    updateFields.role = req.body.role
+  }
+
   // Ajouter l'image si elle est fournie
   if (req.file) {
     updateFields.image = req.file.filename
