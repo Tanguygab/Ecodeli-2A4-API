@@ -5,6 +5,7 @@ import User, { populateUser } from '../models/user.js'
 import ProductRequest from '../models/product_request.js'
 import Location from '../models/location.js'
 import Delivery from '../models/delivery.js'
+import DeliveryStatus from '../models/delivery_status.js'
 import multer from 'multer'
 const router = Router();
 
@@ -48,7 +49,40 @@ router.get('/requests', async (req, res) => {
   if (user === null) return;
 
   try {
-    const requests = await ProductRequest.find({receiver: user._id}).populate("product");
+    const requests = await ProductRequest.find({receiver: user._id})
+      .populate({
+        path: 'product',
+        populate: [
+          { path: 'size' },
+          { path: 'seller', select: "_id firstname name email description join_date role" },
+          { path: 'location' }
+        ]
+      })
+      .populate('delivery_location')
+      .populate('delivery_status')
+      .populate('delivery');
+    
+    res.json(requests);
+  } catch (err) {
+    console.error('Error getting product requests:', err);
+    error(res, "database-error", 500);
+  }
+});
+
+router.get('/requests/unassigned', async (req, res) => {
+  const user = await validToken(req, res);
+  if (user === null) return;
+
+  if (user.role.name !== "admin" && user.role.name !== "deliveryman") {
+    error(res, "no-permission", 403);
+    return
+  }
+
+  try {
+    const requests = await ProductRequest.find({delivery: null})
+      .populate("product")
+      .populate('delivery_location')
+      .populate('delivery_status');
     res.json(requests);
   } catch (err) {
     console.error('Error getting product requests:', err);
@@ -77,16 +111,13 @@ router.get('/requests/:id', async (req, res) => {
     const item = await populateUser(ProductRequest.findOne({ _id: req.params.id }), "receiver")
       .populate('delivery_location')
       .populate('delivery')
+      .populate('delivery_status')
       .populate({
         path: 'product',
         populate: [
-          {
-            path: 'size'
-          },
-          {
-            path: 'seller',
-            select: "_id firstname name email description join_date role"
-          }
+          { path: 'size' },
+          { path: 'seller', select: "_id firstname name email description join_date role" },
+          { path: 'location' }
         ]
       });
     if (!item) {
@@ -102,14 +133,15 @@ router.get('/requests/:id', async (req, res) => {
 
 router.post('/requests/:id/accept', async (req, res) => {
   const user = await validToken(req, res);
-  if (user === null || user.role.name !== 'deliveryman') return;
+  if (user === null || user.role.name !== 'deliveryman' && user.role.name !== 'admin') return;
+  
   const request = await ProductRequest.findOne({ _id: req.params.id });
   if (request === null) {
     error(res, 'product-request.not-found', 404);
     return;
   }
-  if (request.delivery !== null) {
-    error(res, 'product-request.already-assigned', 404);
+  if (request.delivery != null) {
+    error(res, 'product-request.already-assigned');
     return;
   }
   const delivery = await Delivery.findOne({ _id: req.body.delivery, deliveryman: user._id });
@@ -131,10 +163,10 @@ router.post('/', upload.single('image'), async (req, res) => {
     const productData = {
       _id: newId,
       name: req.body.name,
-      price: req.body.price,
-      size: req.body.size,
+      price: parseFloat(req.body.price),
+      size: parseInt(req.body.size),
       seller: user._id,
-      location: req.body.location
+      location: parseInt(req.body.location)
     };
     
     // Ajouter l'image si elle est fournie
@@ -143,7 +175,13 @@ router.post('/', upload.single('image'), async (req, res) => {
     }
     
     const item = await Product.create(productData);
-    res.json(item);
+    
+    // Retourner le produit avec toutes les relations peuplées
+    const populatedItem = await populateUser(Product.findOne({ _id: item._id }), "seller")
+      .populate('size')
+      .populate('location');
+    
+    res.json(populatedItem);
   } catch (err) {
     console.error('Error creating product:', err);
     error(res, "creation-failed", 500);
@@ -161,6 +199,13 @@ router.post('/:id/buy', async (req, res) => {
     const location = await find(res, Location, req.body.location, "location.not-found");
     if (location === null) return;
 
+    // Récupérer le statut de livraison "pending"
+    const pendingStatus = await DeliveryStatus.findOne({ name: "pending" });
+    if (!pendingStatus) {
+      error(res, "delivery-status-not-found", 500);
+      return;
+    }
+
     const newId = await getLastId(ProductRequest) + 1;
     const item = await ProductRequest.create({
       _id: newId,
@@ -169,9 +214,23 @@ router.post('/:id/buy', async (req, res) => {
       receiver: user._id,
       product: product._id,
       amount: req.body.amount,
-      delivery_status: 1
+      delivery_status: pendingStatus._id
     });
-    res.json(item);
+    
+    // Retourner la demande avec toutes les relations peuplées
+    const populatedItem = await populateUser(ProductRequest.findOne({ _id: item._id }), "receiver")
+      .populate('delivery_location')
+      .populate('delivery_status')
+      .populate({
+        path: 'product',
+        populate: [
+          { path: 'size' },
+          { path: 'seller', select: "_id firstname name email description join_date role" },
+          { path: 'location' }
+        ]
+      });
+    
+    res.json(populatedItem);
   } catch (err) {
     console.error('Error creating product request:', err);
     error(res, "creation-failed", 500);
