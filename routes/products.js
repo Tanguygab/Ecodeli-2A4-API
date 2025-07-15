@@ -44,25 +44,116 @@ router.get('/sellers', async (req, res) => {
   }
 });
 
+// ROUTE CORRIGÉE - Récupérer les demandes de produits vendus par l'utilisateur
 router.get('/requests', async (req, res) => {
   const user = await validToken(req, res);
   if (user === null) return;
 
   try {
-    console.log('Récupération product requests pour utilisateur:', user._id);
-    const requests = await ProductRequest.find({receiver: user._id})
-      .populate({
-        path: 'product',
-        populate: [
-          { path: 'size' },
-          { path: 'seller', select: "_id firstname name email description join_date role" },
-          { path: 'location' }
-        ]
-      })
-      .populate('delivery_location')
-      .populate('delivery_status')
-      .populate('delivery');
-    
+    const requests = await ProductRequest.aggregate([
+      {
+        $lookup: {
+          from: "products",
+          localField: "product", 
+          foreignField: "_id",
+          as: "productDetails"
+        }
+      },
+      {
+        $match: {
+          "productDetails.seller": user._id
+        }
+      },
+      {
+        $addFields: {
+          product: { $arrayElemAt: ["$productDetails", 0] }
+        }
+      },
+      { $unset: "productDetails" },
+      {
+        $lookup: {
+          from: "locations",
+          localField: "delivery_location",
+          foreignField: "_id",
+          as: "delivery_location"
+        }
+      },
+      {
+        $lookup: {
+          from: "delivery_statuses",
+          localField: "delivery_status",
+          foreignField: "_id", 
+          as: "delivery_status"
+        }
+      },
+      {
+        $lookup: {
+          from: "deliveries",
+          localField: "delivery",
+          foreignField: "_id",
+          as: "delivery"
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "receiver",
+          foreignField: "_id",
+          as: "receiver",
+          pipeline: [
+            { $project: { _id: 1, firstname: 1, name: 1, email: 1, description: 1, join_date: 1, role: 1 } }
+          ]
+        }
+      },
+      {
+        $addFields: {
+          delivery_location: { $arrayElemAt: ["$delivery_location", 0] },
+          delivery_status: { $arrayElemAt: ["$delivery_status", 0] },
+          delivery: { $arrayElemAt: ["$delivery", 0] },
+          receiver: { $arrayElemAt: ["$receiver", 0] }
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "product.seller",
+          foreignField: "_id",
+          as: "product.seller",
+          pipeline: [
+            { $project: { _id: 1, firstname: 1, name: 1, email: 1, description: 1, join_date: 1, role: 1 } }
+          ]
+        }
+      },
+      {
+        $addFields: {
+          "product.seller": { $arrayElemAt: ["$product.seller", 0] }
+        }
+      },
+      {
+        $lookup: {
+          from: "package_sizes",
+          localField: "product.size",
+          foreignField: "_id",
+          as: "product.size"
+        }
+      },
+      {
+        $lookup: {
+          from: "locations",
+          localField: "product.location",
+          foreignField: "_id",
+          as: "product.location"
+        }
+      },
+      {
+        $addFields: {
+          "product.size": { $arrayElemAt: ["$product.size", 0] },
+          "product.location": { $arrayElemAt: ["$product.location", 0] }
+        }
+      },
+      { $sort: { creation_date: -1 } }
+    ]);
+
     console.log('Product requests trouvés:', requests.length);
     res.json(requests);
   } catch (err) {
@@ -135,7 +226,13 @@ router.get('/requests/:id', async (req, res) => {
 
 router.post('/requests/:id/accept', async (req, res) => {
   const user = await validToken(req, res);
-  if (user === null || user.role.name !== 'deliveryman' && user.role.name !== 'admin') return;
+  if (user === null) return;
+  
+  if (user.role.name !== 'deliveryman' && user.role.name !== 'admin') {
+    error(res, "no-permission", 403);
+    return;
+  }
+  
   
   const request = await ProductRequest.findOne({ _id: req.params.id });
   if (request === null) {
@@ -146,14 +243,20 @@ router.post('/requests/:id/accept', async (req, res) => {
     error(res, 'product-request.already-assigned');
     return;
   }
-  const delivery = await Delivery.findOne({ _id: req.body.delivery, deliveryman: user._id });
-  if (delivery === null) {
-    error(res, 'delivery.not-found', 404);
-    return;
-  }
+  
+  try {
+    const delivery = await Delivery.findOne({ _id: req.body.delivery, deliveryman: user._id });
+    if (delivery === null) {
+      error(res, 'delivery.not-found', 404);
+      return;
+    }
 
-  await ProductRequest.updateOne({ _id: req.params.id }, { delivery: delivery._id })
-  res.json("request.accepted");
+    await ProductRequest.updateOne({ _id: req.params.id }, { delivery: delivery._id });
+    res.json("request.accepted");
+  } catch (err) {
+    console.error('Error accepting product request:', err);
+    error(res, "update-failed", 500);
+  }
 });
 
 // Route pour créer un produit (JSON uniquement, pour l'Android)
@@ -162,12 +265,7 @@ router.post('/', async (req, res) => {
   if (user === null) return;
 
   try {
-    console.log('Création produit reçue:', req.body);
-    console.log('Utilisateur:', user._id, user.email);
-
-    // Valider les données reçues
     if (!req.body.name || !req.body.price) {
-      console.error('Données manquantes:', req.body);
       error(res, "missing-required-fields", 400);
       return;
     }
@@ -175,11 +273,8 @@ router.post('/', async (req, res) => {
     // Créer ou récupérer la location
     let locationId;
     if (req.body.location && typeof req.body.location === 'object') {
-      // Si location est un objet avec les détails
       const locationData = req.body.location;
-      console.log('Création/recherche location:', locationData);
       
-      // Vérifier si une location identique existe déjà
       const existingLocation = await Location.findOne({
         user: user._id,
         city: locationData.city,
@@ -189,7 +284,6 @@ router.post('/', async (req, res) => {
       
       if (existingLocation) {
         locationId = existingLocation._id;
-        console.log('Location existante trouvée:', locationId);
       } else {
         const newLocationId = await getLastId(Location) + 1;
         const newLocation = await Location.create({
@@ -200,22 +294,16 @@ router.post('/', async (req, res) => {
           address: locationData.address,
         });
         locationId = newLocation._id;
-        console.log('Nouvelle location créée:', locationId);
-      }
+      };
     } else if (req.body.location) {
-      // Si location est un ID
       locationId = parseInt(req.body.location);
-      console.log('Utilisation location ID:', locationId);
       
-      // Vérifier que la location existe
       const location = await Location.findOne({ _id: locationId });
       if (!location) {
-        console.error('Location non trouvée:', locationId);
         error(res, "location.not-found", 400);
         return;
       }
     } else {
-      console.error('Aucune location fournie');
       error(res, "location-required", 400);
       return;
     }
@@ -225,12 +313,10 @@ router.post('/', async (req, res) => {
       _id: newId,
       name: req.body.name,
       price: parseFloat(req.body.price),
-      size: parseInt(req.body.size) || 2, // Default à M si pas spécifié
+      size: parseInt(req.body.size) || 2,
       seller: user._id,
       location: locationId
     };
-    
-    console.log('Données produit à créer:', productData);
     
     const item = await Product.create(productData);
     console.log('Produit créé avec ID:', item._id);
@@ -240,7 +326,6 @@ router.post('/', async (req, res) => {
       .populate('size')
       .populate('location');
     
-    console.log('Produit retourné:', populatedItem ? 'OK' : 'NULL');
     res.json(populatedItem);
   } catch (err) {
     console.error('Error creating product:', err);
@@ -254,24 +339,39 @@ router.post('/with-image', upload.single('image'), async (req, res) => {
   if (user === null) return;
 
   try {
+    if (!req.body.name || !req.body.price) {
+      error(res, "missing-required-fields", 400);
+      return;
+    }
+    
+    if (!req.body.location) {
+      error(res, "location-required", 400);
+      return;
+    }
+    
+    // Vérifier que la location existe
+    const location = await Location.findOne({ _id: parseInt(req.body.location) });
+    if (!location) {
+      error(res, "location.not-found", 400);
+      return;
+    }
+    
     const newId = await getLastId(Product) + 1;
     const productData = {
       _id: newId,
       name: req.body.name,
       price: parseFloat(req.body.price),
-      size: parseInt(req.body.size),
+      size: parseInt(req.body.size) || 2,
       seller: user._id,
       location: parseInt(req.body.location)
     };
     
-    // Ajouter l'image si elle est fournie
     if (req.file) {
       productData.image = req.file.filename;
     }
     
     const item = await Product.create(productData);
     
-    // Retourner le produit avec toutes les relations peuplées
     const populatedItem = await populateUser(Product.findOne({ _id: item._id }), "seller")
       .populate('size')
       .populate('location');
@@ -339,7 +439,6 @@ router.put('/:id', upload.single('image'), async (req, res) => {
   try {
     const updateData = { ...req.body };
     
-    // Ajouter l'image si elle est fournie
     if (req.file) {
       updateData.image = req.file.filename;
     }
@@ -360,6 +459,27 @@ router.put('/:id', upload.single('image'), async (req, res) => {
   }
 });
 
+router.put('/requests/:id', async (req, res) => {
+  const user = await validToken(req, res);
+  if (user === null) return;
+
+  try {
+    const item = await ProductRequest.findOneAndUpdate(
+      { _id: req.params.id },
+      req.body,
+      { new: true }
+    );
+    if (!item) {
+      error(res, 'product-request.not-found', 404);
+      return;
+    }
+    res.json(item);
+  } catch (err) {
+    console.error('Error updating product request:', err);
+    error(res, "update-failed", 500);
+  }
+});
+
 router.delete('/:id', async (req, res) => {
   const user = await validToken(req, res);
   if (user === null) return;
@@ -373,6 +493,23 @@ router.delete('/:id', async (req, res) => {
     res.json();
   } catch (err) {
     console.error('Error deleting product:', err);
+    error(res, "deletion-failed", 500);
+  }
+});
+
+router.delete('/requests/:id', async (req, res) => {
+  const user = await validToken(req, res);
+  if (user === null) return;
+
+  try {
+    const item = await ProductRequest.findOneAndDelete({ _id: req.params.id });
+    if (!item) {
+      error(res, 'product-request.not-found', 404);
+      return;
+    }
+    res.json();
+  } catch (err) {
+    console.error('Error deleting product request:', err);
     error(res, "deletion-failed", 500);
   }
 });
