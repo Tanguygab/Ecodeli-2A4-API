@@ -1,7 +1,16 @@
 import { Router } from 'express';
 import Delivery from '../models/delivery.js';
 import { error, getLastId, validToken } from '../utils.js'
+import multer from 'multer'
+import Proof from '../models/proof.js'
 const router = Router();
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: 'public/data/proofs/',
+    filename: (req, file, cb) => cb(null, new Date().getTime() + "." + file.mimetype.substring(file.mimetype.indexOf("/") + 1))
+  })
+})
 
 router.get('/', async (req, res) => {
   const user = await validToken(req, res)
@@ -67,6 +76,26 @@ router.post('/', async (req, res) => {
   const newId = await getLastId(Delivery) + 1;
   const item = await Delivery.create({ _id: newId, deliveryman: user._id });
   res.json(item);
+});
+
+router.post('/join', upload.single('proof'), async (req, res) => {
+  const user = await validToken(req, res)
+  if (user === null) return
+
+  if (!req.file) {
+    error(res, "no-proof")
+    return
+  }
+  const newId = await getLastId(Proof) + 1;
+  await Proof.create({
+    _id: newId,
+    user: user._id,
+    date: new Date(),
+    name: "Proof for DeliveryMan",
+    filepath: req.file.filename,
+  })
+
+  res.json();
 });
 
 router.put('/:id', async (req, res) => {

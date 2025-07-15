@@ -8,12 +8,13 @@ import Delivery from '../models/delivery.js'
 import multer from 'multer'
 const router = Router();
 
-// Configuration multer pour la gestion des images de produits
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
-  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
-})
-const upload = multer({ storage })
+const upload = multer({
+  fileFilter: (req, file, cb) => cb(null, file.mimetype.startsWith('image/')),
+  storage: multer.diskStorage({
+    destination: 'public/data/images/',
+    filename: (req, file, cb) => cb(null, new Date().getTime() + "." + file.mimetype.substring(6))
+  })
+});
 
 router.get('/', async (req, res) => {
   try {
@@ -138,7 +139,7 @@ router.post('/', upload.single('image'), async (req, res) => {
     
     // Ajouter l'image si elle est fournie
     if (req.file) {
-      productData.image = '/uploads/' + req.file.filename;
+      productData.image = req.file.filename;
     }
     
     const item = await Product.create(productData);
@@ -186,7 +187,7 @@ router.put('/:id', upload.single('image'), async (req, res) => {
     
     // Ajouter l'image si elle est fournie
     if (req.file) {
-      updateData.image = '/uploads/' + req.file.filename;
+      updateData.image = req.file.filename;
     }
     
     const item = await Product.findOneAndUpdate(
