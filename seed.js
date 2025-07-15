@@ -3,6 +3,7 @@ import Role from './models/role.js';
 import Subscription from './models/subscription.js';
 import PackageSize from './models/package_size.js';
 import DeliveryStatus from './models/delivery_status.js';
+import Postannoucement from './models/postannoucement.js';
 
 // Variables d'environnement par défaut si non définies
 const DB_PORT = process.env.DB_PORT || 27017;
@@ -124,6 +125,56 @@ async function seedDatabase() {
             );
         }
         console.log(" Delivery statuses seeded successfully");
+
+        // Seed Postannoucements (sample data)
+        console.log(" Seeding Postannoucements...");
+        const postannoucements = [
+            {
+                _id: 1,
+                firstname: "Jean",
+                lastname: "Dupont",
+                email: "jean.dupont@email.com",
+                phone: "0601020304",
+                justificatif: "/uploads/sample-justificatif1.pdf",
+                status: "pending",
+                submission_date: new Date("2025-07-10")
+            },
+            {
+                _id: 2,
+                firstname: "Marie",
+                lastname: "Martin",
+                email: "marie.martin@email.com",
+                phone: "0605060708",
+                justificatif: "/uploads/sample-justificatif2.pdf",
+                status: "accepted",
+                submission_date: new Date("2025-07-08"),
+                reviewed_by: 2,
+                reviewed_date: new Date("2025-07-12"),
+                notes: "Candidature acceptée - Profil excellent"
+            },
+            {
+                _id: 3,
+                firstname: "Pierre",
+                lastname: "Durand",
+                email: "pierre.durand@email.com",
+                phone: "0609101112",
+                justificatif: "/uploads/sample-justificatif3.pdf",
+                status: "rejected",
+                submission_date: new Date("2025-07-05"),
+                reviewed_by: 2,
+                reviewed_date: new Date("2025-07-11"),
+                notes: "Justificatifs insuffisants"
+            }
+        ];
+
+        for (const postannoucement of postannoucements) {
+            await Postannoucement.findOneAndUpdate(
+                { _id: postannoucement._id },
+                postannoucement,
+                { upsert: true, new: true }
+            );
+        }
+        console.log(" Postannoucements seeded successfully");
 
         console.log(" Database seeded successfully!");
         process.exit(0);
