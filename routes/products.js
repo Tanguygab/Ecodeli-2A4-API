@@ -49,19 +49,7 @@ router.get('/requests', async (req, res) => {
   if (user === null) return;
 
   try {
-    const requests = await ProductRequest.find({receiver: user._id})
-      .populate({
-        path: 'product',
-        populate: [
-          { path: 'size' },
-          { path: 'seller', select: "_id firstname name email description join_date role" },
-          { path: 'location' }
-        ]
-      })
-      .populate('delivery_location')
-      .populate('delivery_status')
-      .populate('delivery');
-    
+    const requests = await ProductRequest.find({receiver: user._id}).populate("product");
     res.json(requests);
   } catch (err) {
     console.error('Error getting product requests:', err);
@@ -79,10 +67,7 @@ router.get('/requests/unassigned', async (req, res) => {
   }
 
   try {
-    const requests = await ProductRequest.find({delivery: null})
-      .populate("product")
-      .populate('delivery_location')
-      .populate('delivery_status');
+    const requests = await ProductRequest.find({delivery: null}).populate("product");
     res.json(requests);
   } catch (err) {
     console.error('Error getting product requests:', err);
@@ -135,6 +120,7 @@ router.post('/requests/:id/accept', async (req, res) => {
   const user = await validToken(req, res);
   if (user === null || user.role.name !== 'deliveryman' && user.role.name !== 'admin') return;
   
+  if (user === null || user.role.name !== 'deliveryman' && user.role.name !== 'admin') return;
   const request = await ProductRequest.findOne({ _id: req.params.id });
   if (request === null) {
     error(res, 'product-request.not-found', 404);

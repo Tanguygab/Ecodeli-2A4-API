@@ -47,7 +47,7 @@ router.put('/:id', upload.single('image'), async (req, res) => {
   if (user === null) return
 
   if (user.role.name !== 'admin' && user.id !== req.params.id) {
-    error(res, 'no-permission', 404);
+    error(res, 'no-permission', 403);
     return
   }
 
@@ -69,6 +69,10 @@ router.put('/:id', upload.single('image'), async (req, res) => {
     notifications: req.body.notifications === 'true' || req.body.notifications === true,
   }
   
+  if (req.body.role !== undefined) {
+    updateFields.role = req.body.role
+  }
+
   // Ajouter l'image si elle est fournie
   if (req.file) {
     updateFields.image = req.file.filename
@@ -87,7 +91,7 @@ router.put('/:id/password', async (req, res) => {
   if (user === null) return
 
   if (user.role.name !== 'admin' && user.id !== req.params.id) {
-    error(res, 'no-permission', 404);
+    error(res, 'no-permission', 403);
     return
   }
 
@@ -117,7 +121,7 @@ router.delete('/:id', async (req, res) => {
   if (user === null) return
 
   if (user.role.name !== 'admin' && user.id !== req.params.id) {
-    error(res, 'no-permission', 404);
+    error(res, 'no-permission', 403);
     return
   }
 
