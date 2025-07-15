@@ -2,14 +2,33 @@ import { Router } from 'express';
 import Postannoucement from '../models/postannoucement.js';
 import { error, getLastId } from '../utils.js'
 import multer from 'multer'
+import fs from 'fs'
 const router = Router();
+
+// Créer le dossier uploads s'il n'existe pas
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads', { recursive: true });
+}
 
 // Configuration multer pour la gestion des justificatifs
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
-  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+  destination: (req, file, cb) => {
+    console.log('Multer destination called for file:', file.originalname);
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    const filename = Date.now() + '-' + file.originalname;
+    console.log('Multer filename called, generating:', filename);
+    cb(null, filename);
+  }
 })
-const upload = multer({ storage })
+const upload = multer({ 
+  storage,
+  fileFilter: (req, file, cb) => {
+    console.log('File filter called for file:', file.originalname);
+    cb(null, true);
+  }
+})
 
 // GET / - Récupérer toutes les demandes
 router.get('/', async (req, res) => {
