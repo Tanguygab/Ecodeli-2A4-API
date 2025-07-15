@@ -56,6 +56,24 @@ router.get('/requests', async (req, res) => {
   }
 });
 
+router.get('/requests/unassigned', async (req, res) => {
+  const user = await validToken(req, res);
+  if (user === null) return;
+
+  if (user.role.name !== "admin" && user.role.name !== "deliveryman") {
+    error(res, "no-permission", 403);
+    return
+  }
+
+  try {
+    const requests = await ProductRequest.find({delivery: null}).populate("product");
+    res.json(requests);
+  } catch (err) {
+    console.error('Error getting product requests:', err);
+    error(res, "database-error", 500);
+  }
+});
+
 router.get('/:id', async (req, res) => {
   try {
     const item = await populateUser(Product.findOne({ _id: req.params.id }), "seller")
@@ -102,14 +120,14 @@ router.get('/requests/:id', async (req, res) => {
 
 router.post('/requests/:id/accept', async (req, res) => {
   const user = await validToken(req, res);
-  if (user === null || user.role.name !== 'deliveryman') return;
+  if (user === null || user.role.name !== 'deliveryman' && user.role.name !== 'admin') return;
   const request = await ProductRequest.findOne({ _id: req.params.id });
   if (request === null) {
     error(res, 'product-request.not-found', 404);
     return;
   }
-  if (request.delivery !== null) {
-    error(res, 'product-request.already-assigned', 404);
+  if (request.delivery != null) {
+    error(res, 'product-request.already-assigned');
     return;
   }
   const delivery = await Delivery.findOne({ _id: req.body.delivery, deliveryman: user._id });
