@@ -49,6 +49,7 @@ router.get('/requests', async (req, res) => {
   if (user === null) return;
 
   try {
+    console.log('Récupération product requests pour utilisateur:', user._id);
     const requests = await ProductRequest.find({receiver: user._id})
       .populate({
         path: 'product',
@@ -62,6 +63,7 @@ router.get('/requests', async (req, res) => {
       .populate('delivery_status')
       .populate('delivery');
     
+    console.log('Product requests trouvés:', requests.length);
     res.json(requests);
   } catch (err) {
     console.error('Error getting product requests:', err);
@@ -161,12 +163,23 @@ router.post('/', async (req, res) => {
 
   try {
     console.log('Création produit reçue:', req.body);
+    console.log('Utilisateur:', user._id, user.email);
+
+    // Valider les données reçues
+    if (!req.body.name || !req.body.price) {
+      console.error('Données manquantes:', req.body);
+      error(res, "missing-required-fields", 400);
+      return;
+    }
     
-    // D'abord, créer ou récupérer la location
+    // Créer ou récupérer la location
     let locationId;
     if (req.body.location && typeof req.body.location === 'object') {
       // Si location est un objet avec les détails
       const locationData = req.body.location;
+      console.log('Création/recherche location:', locationData);
+      
+      // Vérifier si une location identique existe déjà
       const existingLocation = await Location.findOne({
         user: user._id,
         city: locationData.city,
@@ -178,8 +191,9 @@ router.post('/', async (req, res) => {
         locationId = existingLocation._id;
         console.log('Location existante trouvée:', locationId);
       } else {
+        const newLocationId = await getLastId(Location) + 1;
         const newLocation = await Location.create({
-          _id: await getLastId(Location) + 1,
+          _id: newLocationId,
           user: user._id,
           city: locationData.city,
           zipcode: locationData.zipcode,
@@ -188,9 +202,22 @@ router.post('/', async (req, res) => {
         locationId = newLocation._id;
         console.log('Nouvelle location créée:', locationId);
       }
-    } else {
+    } else if (req.body.location) {
       // Si location est un ID
       locationId = parseInt(req.body.location);
+      console.log('Utilisation location ID:', locationId);
+      
+      // Vérifier que la location existe
+      const location = await Location.findOne({ _id: locationId });
+      if (!location) {
+        console.error('Location non trouvée:', locationId);
+        error(res, "location.not-found", 400);
+        return;
+      }
+    } else {
+      console.error('Aucune location fournie');
+      error(res, "location-required", 400);
+      return;
     }
 
     const newId = await getLastId(Product) + 1;
@@ -198,7 +225,7 @@ router.post('/', async (req, res) => {
       _id: newId,
       name: req.body.name,
       price: parseFloat(req.body.price),
-      size: parseInt(req.body.size),
+      size: parseInt(req.body.size) || 2, // Default à M si pas spécifié
       seller: user._id,
       location: locationId
     };
@@ -213,6 +240,7 @@ router.post('/', async (req, res) => {
       .populate('size')
       .populate('location');
     
+    console.log('Produit retourné:', populatedItem ? 'OK' : 'NULL');
     res.json(populatedItem);
   } catch (err) {
     console.error('Error creating product:', err);
