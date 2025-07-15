@@ -5,7 +5,15 @@ import User, { populateUser } from '../models/user.js'
 import ProductRequest from '../models/product_request.js'
 import Location from '../models/location.js'
 import Delivery from '../models/delivery.js'
+import multer from 'multer'
 const router = Router();
+
+// Configuration multer pour la gestion des images de produits
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'uploads/'),
+  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+})
+const upload = multer({ storage })
 
 router.get('/', async (req, res) => {
   try {
@@ -113,7 +121,7 @@ router.post('/requests/:id/accept', async (req, res) => {
   res.json("request.accepted");
 });
 
-router.post('/', async (req, res) => {
+router.post('/', upload.single('image'), async (req, res) => {
   const user = await validToken(req, res);
   if (user === null) return;
 
@@ -127,6 +135,11 @@ router.post('/', async (req, res) => {
       seller: user._id,
       location: req.body.location
     };
+    
+    // Ajouter l'image si elle est fournie
+    if (req.file) {
+      productData.image = '/uploads/' + req.file.filename;
+    }
     
     const item = await Product.create(productData);
     res.json(item);
@@ -164,14 +177,21 @@ router.post('/:id/buy', async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', upload.single('image'), async (req, res) => {
   const user = await validToken(req, res);
   if (user === null) return;
 
   try {
+    const updateData = { ...req.body };
+    
+    // Ajouter l'image si elle est fournie
+    if (req.file) {
+      updateData.image = '/uploads/' + req.file.filename;
+    }
+    
     const item = await Product.findOneAndUpdate(
       { _id: req.params.id },
-      req.body,
+      updateData,
       { new: true }
     );
     if (!item) {

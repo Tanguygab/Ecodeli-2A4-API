@@ -2,7 +2,15 @@ import { Router } from 'express';
 import User from '../models/user.js';
 import { error, getLastId, validToken } from '../utils.js'
 import { genSalt, hash } from 'bcryptjs'
+import multer from 'multer'
 const router = Router();
+
+// Configuration multer pour la gestion des images
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'uploads/'),
+  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+})
+const upload = multer({ storage })
 
 router.get('/', async (req, res) => {
   const items = await User.find({}, "_id firstname name image email description join_date role");
@@ -20,13 +28,20 @@ router.get('/:id', async (req, res) => {
   res.json(item);
 });
 
-router.post('/', async (req, res) => {
+router.post('/', upload.single('image'), async (req, res) => {
   const newId = await getLastId(User) + 1;
-  const item = await User.create({ _id: newId, ...req.body });
+  const userData = { _id: newId, ...req.body };
+  
+  // Ajouter l'image si elle est fournie
+  if (req.file) {
+    userData.image = '/uploads/' + req.file.filename;
+  }
+  
+  const item = await User.create(userData);
   res.json(item);
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', upload.single('image'), async (req, res) => {
   const user = await validToken(req, res)
   if (user === null) return
 
@@ -36,26 +51,32 @@ router.put('/:id', async (req, res) => {
   }
 
   if (await User.findOne({
-    _id: {
-      $ne: user._id,
-    },
+    _id: { $ne: user._id },
     email: req.body.email
   })) {
     error(res, 'email.already-used', 404);
     return
   }
 
+  const updateFields = {
+    firstname: req.body.firstname,
+    name: req.body.name,
+    email: req.body.email,
+    description: req.body.description,
+    birthday: req.body.birthday,
+    tutorial: req.body.tutorial === 'true' || req.body.tutorial === true,
+    notifications: req.body.notifications === 'true' || req.body.notifications === true,
+  }
+  
+  // Ajouter l'image si elle est fournie
+  if (req.file) {
+    updateFields.image = '/uploads/' + req.file.filename
+  }
+
   const item = await User.findOneAndUpdate(
     { _id: req.params.id },
-    {
-      $set: {
-        firstname: req.body.firstname,
-        name: req.body.name,
-        email: req.body.email,
-        description: req.body.description,
-        birthday: req.body.birthday,
-      }
-    },
+    { $set: updateFields },
+    { new: true }
   )
   res.json(item);
 });

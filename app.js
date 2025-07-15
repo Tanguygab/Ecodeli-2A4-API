@@ -9,6 +9,7 @@ const router = express.Router()
 app.use(json());
 app.use(cors());
 app.use(express.static('public'))
+app.use('/uploads', express.static('uploads'))
 app.use("/api", router)
 
 // MongoDB Connection
