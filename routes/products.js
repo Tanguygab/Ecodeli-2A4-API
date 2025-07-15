@@ -49,7 +49,19 @@ router.get('/requests', async (req, res) => {
   if (user === null) return;
 
   try {
-    const requests = await ProductRequest.find({receiver: user._id}).populate("product");
+    const requests = await ProductRequest.find({receiver: user._id})
+      .populate({
+        path: 'product',
+        populate: [
+          { path: 'size' },
+          { path: 'seller', select: "_id firstname name email description join_date role" },
+          { path: 'location' }
+        ]
+      })
+      .populate('delivery_location')
+      .populate('delivery_status')
+      .populate('delivery');
+    
     res.json(requests);
   } catch (err) {
     console.error('Error getting product requests:', err);
@@ -67,7 +79,10 @@ router.get('/requests/unassigned', async (req, res) => {
   }
 
   try {
-    const requests = await ProductRequest.find({delivery: null}).populate("product");
+    const requests = await ProductRequest.find({delivery: null})
+      .populate("product")
+      .populate('delivery_location')
+      .populate('delivery_status');
     res.json(requests);
   } catch (err) {
     console.error('Error getting product requests:', err);
@@ -120,7 +135,6 @@ router.post('/requests/:id/accept', async (req, res) => {
   const user = await validToken(req, res);
   if (user === null || user.role.name !== 'deliveryman' && user.role.name !== 'admin') return;
   
-  if (user === null || user.role.name !== 'deliveryman' && user.role.name !== 'admin') return;
   const request = await ProductRequest.findOne({ _id: req.params.id });
   if (request === null) {
     error(res, 'product-request.not-found', 404);
@@ -140,7 +154,74 @@ router.post('/requests/:id/accept', async (req, res) => {
   res.json("request.accepted");
 });
 
-router.post('/', upload.single('image'), async (req, res) => {
+// Route pour créer un produit (JSON uniquement, pour l'Android)
+router.post('/', async (req, res) => {
+  const user = await validToken(req, res);
+  if (user === null) return;
+
+  try {
+    console.log('Création produit reçue:', req.body);
+    
+    // D'abord, créer ou récupérer la location
+    let locationId;
+    if (req.body.location && typeof req.body.location === 'object') {
+      // Si location est un objet avec les détails
+      const locationData = req.body.location;
+      const existingLocation = await Location.findOne({
+        user: user._id,
+        city: locationData.city,
+        zipcode: locationData.zipcode,
+        address: locationData.address,
+      });
+      
+      if (existingLocation) {
+        locationId = existingLocation._id;
+        console.log('Location existante trouvée:', locationId);
+      } else {
+        const newLocation = await Location.create({
+          _id: await getLastId(Location) + 1,
+          user: user._id,
+          city: locationData.city,
+          zipcode: locationData.zipcode,
+          address: locationData.address,
+        });
+        locationId = newLocation._id;
+        console.log('Nouvelle location créée:', locationId);
+      }
+    } else {
+      // Si location est un ID
+      locationId = parseInt(req.body.location);
+    }
+
+    const newId = await getLastId(Product) + 1;
+    const productData = {
+      _id: newId,
+      name: req.body.name,
+      price: parseFloat(req.body.price),
+      size: parseInt(req.body.size),
+      seller: user._id,
+      location: locationId
+    };
+    
+    console.log('Données produit à créer:', productData);
+    
+    const item = await Product.create(productData);
+    console.log('Produit créé avec ID:', item._id);
+    
+    // Retourner le produit avec toutes les relations peuplées
+    const populatedItem = await populateUser(Product.findOne({ _id: item._id }), "seller")
+      .populate('size')
+      .populate('location');
+    
+    res.json(populatedItem);
+  } catch (err) {
+    console.error('Error creating product:', err);
+    error(res, "creation-failed", 500);
+  }
+});
+
+// Route pour créer un produit avec image (Multipart, pour le web)
+router.post('/with-image', upload.single('image'), async (req, res) => {
   const user = await validToken(req, res);
   if (user === null) return;
 
@@ -169,7 +250,7 @@ router.post('/', upload.single('image'), async (req, res) => {
     
     res.json(populatedItem);
   } catch (err) {
-    console.error('Error creating product:', err);
+    console.error('Error creating product with image:', err);
     error(res, "creation-failed", 500);
   }
 });
