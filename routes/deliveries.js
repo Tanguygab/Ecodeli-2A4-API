@@ -1,11 +1,28 @@
 import { Router } from 'express';
 import Delivery from '../models/delivery.js';
-import { error, getLastId } from '../utils.js';
+import { error, getLastId, validToken } from '../utils.js'
 import { populateUser } from '../models/user.js'
 const router = Router();
 
 router.get('/', async (req, res) => {
-  const items = await Delivery.find();
+  const user = await validToken(req, res)
+  if (user === null) return
+
+  const filter = user.role.name === "admin" ? {} : { deliveryman: user._id }
+
+  const items = await Delivery.aggregate()
+    .match(filter)
+    .lookup({
+      from: "product_requests",
+      localField: "_id",
+      foreignField: "delivery",
+      as: "products",
+    })
+    .addFields({
+        first_product_date: { $min: "$products.date" },
+        last_product_date: { $max: "$products.date" },
+        products: { $size: "$products" }
+    });
   res.json(items);
 });
 
