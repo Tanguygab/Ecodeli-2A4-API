@@ -5,12 +5,13 @@ import { genSalt, hash } from 'bcryptjs'
 import multer from 'multer'
 const router = Router();
 
-// Configuration multer pour la gestion des images
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
-  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
-})
-const upload = multer({ storage })
+const upload = multer({
+  fileFilter: (req, file, cb) => cb(null, file.mimetype.startsWith('image/')),
+  storage: multer.diskStorage({
+    destination: 'public/data/images/',
+    filename: (req, file, cb) => cb(null, new Date().getTime() + "." + file.mimetype.substring(6))
+  })
+});
 
 router.get('/', async (req, res) => {
   const items = await User.find({}, "_id firstname name image email description join_date role");
@@ -34,7 +35,7 @@ router.post('/', upload.single('image'), async (req, res) => {
   
   // Ajouter l'image si elle est fournie
   if (req.file) {
-    userData.image = '/uploads/' + req.file.filename;
+    userData.image = req.file.filename;
   }
   
   const item = await User.create(userData);
@@ -70,7 +71,7 @@ router.put('/:id', upload.single('image'), async (req, res) => {
   
   // Ajouter l'image si elle est fournie
   if (req.file) {
-    updateFields.image = '/uploads/' + req.file.filename
+    updateFields.image = req.file.filename
   }
 
   const item = await User.findOneAndUpdate(
