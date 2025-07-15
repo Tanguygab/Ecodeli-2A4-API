@@ -4,6 +4,5 @@ export default create("deliveries", {
     _id: Number,
     deliveryman: {type: Number, ref: "users"},
     latitude: Number,
-    longitude: Number,
-    products: Number
+    longitude: Number
 })
