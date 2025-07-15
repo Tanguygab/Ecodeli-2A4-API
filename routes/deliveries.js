@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import Delivery from '../models/delivery.js';
 import { error, getLastId, validToken } from '../utils.js'
-import { populateUser } from '../models/user.js'
 const router = Router();
 
 router.get('/', async (req, res) => {
@@ -27,17 +26,46 @@ router.get('/', async (req, res) => {
 });
 
 router.get('/:id', async (req, res) => {
-  const item = await populateUser(Delivery.findOne({ _id: req.params.id }),'deliveryman');
-  if (!item) {
-    error(res, 'delivery.not-found', 404);
-    return;
-  }
-  res.json(item);
+  const user = await validToken(req, res)
+  if (user === null) return
+
+  const filter = { _id: Number(req.params.id) }
+  if (user.role.name !== "admin") filter["deliveryman"] = user._id
+
+  const items = await Delivery.aggregate()
+    .match(filter)
+    .lookup({
+      from: "product_requests",
+      localField: "_id",
+      foreignField: "delivery",
+      as: "products",
+      pipeline: [{
+        $lookup: {
+          from: "products",
+          localField: "product",
+          foreignField: "_id",
+          as: "product",
+        }
+      }, {
+        $addFields: {
+          product: {$first: "$product"}
+        }
+      }]
+    })
+    .addFields({
+      first_product_date: { $min: "$products.date" },
+      last_product_date: { $max: "$products.date" },
+    })
+    .limit(1);
+  res.json(items[0]);
 });
 
 router.post('/', async (req, res) => {
+  const user = await validToken(req, res)
+  if (user === null) return
+
   const newId = await getLastId(Delivery) + 1;
-  const item = await Delivery.create({ _id: newId, ...req.body });
+  const item = await Delivery.create({ _id: newId, deliveryman: user._id });
   res.json(item);
 });
 
