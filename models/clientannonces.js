@@ -1,5 +1,4 @@
-import create from './model.js'
-
+// Rendre date et location optionnels
 export default create("clientannonces", {
     _id: Number,
     title: {
@@ -12,11 +11,13 @@ export default create("clientannonces", {
     },
     date: {
         type: Date,
-        required: true
+        required: false, // Changé de true à false
+        default: Date.now
     },
     location: {
         type: String,
-        required: true
+        required: false, // Changé de true à false
+        default: 'Non spécifié'
     },
     user: {
         type: Number,
