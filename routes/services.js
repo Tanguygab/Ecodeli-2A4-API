@@ -1,9 +1,11 @@
 import { Router } from 'express';
 import Service from '../models/service.js';
-import { error, find, getLastId, validToken } from '../utils.js'
-import { populateUser } from '../models/user.js'
+import { error, find, getLastId, validToken } from '../utils.js';
+import { populateUser } from '../models/user.js';
+
 const router = Router();
 
+// GET /api/services
 router.get('/', async (req, res) => {
   const user = await validToken(req, res);
   if (user === null) return;
@@ -21,9 +23,14 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/services/:id
 router.get('/:id', async (req, res) => {
+  const user = await validToken(req, res);
+  if (user === null) return;
+
   try {
-    const item = await populateUser(populateUser(Service.findOne({ _id: req.params.id })),'actor');
+    const item = await populateUser(Service.findOne({ _id: req.params.id }))
+      .populate('actor');
     if (!item) {
       error(res, 'service.not-found', 404);
       return;
@@ -35,6 +42,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// POST /api/services
 router.post('/', async (req, res) => {
   const user = await validToken(req, res);
   if (user === null) return;
@@ -50,12 +58,12 @@ router.post('/', async (req, res) => {
       return;
     }
 
-    // Créer le service sans location (pas nécessaire pour un service)
+    // Créer le service
     const newId = await getLastId(Service) + 1;
     const serviceData = {
       _id: newId,
       creation_date: new Date(),
-      date: new Date(req.body.date),
+      date: new Date(req.body.date || Date.now()),
       name: req.body.name,
       description: req.body.description,
       price: parseFloat(req.body.price) || 0.0,
@@ -79,13 +87,14 @@ router.post('/', async (req, res) => {
   }
 });
 
+// PUT /api/services/:id
 router.put('/:id', async (req, res) => {
   const user = await validToken(req, res);
   if (user === null) return;
 
   try {
     const item = await Service.findOneAndUpdate(
-      { _id: req.params.id, user: user._id }, // S'assurer que l'utilisateur ne peut modifier que ses services
+      { _id: req.params.id, user: user._id },
       req.body,
       { new: true }
     );
@@ -100,6 +109,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+// DELETE /api/services/:id
 router.delete('/:id', async (req, res) => {
   const user = await validToken(req, res);
   if (user === null) return;
@@ -107,7 +117,7 @@ router.delete('/:id', async (req, res) => {
   try {
     const item = await Service.findOneAndDelete({ 
       _id: req.params.id, 
-      user: user._id // S'assurer que l'utilisateur ne peut supprimer que ses services
+      user: user._id 
     });
     if (!item) {
       error(res, 'service.not-found', 404);
