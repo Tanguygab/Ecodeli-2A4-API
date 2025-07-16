@@ -1,3 +1,4 @@
+import create from './model.js'
 // Rendre date et location optionnels
 export default create("clientannonces", {
     _id: Number,
