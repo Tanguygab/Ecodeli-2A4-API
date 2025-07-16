@@ -3,6 +3,8 @@ import Delivery from '../models/delivery.js';
 import { error, getLastId, validToken } from '../utils.js'
 import multer from 'multer'
 import Proof from '../models/proof.js'
+import Product_request from '../models/product_request.js'
+import Delivery_status from '../models/delivery_status.js'
 const router = Router();
 
 const upload = multer({
@@ -16,7 +18,8 @@ router.get('/', async (req, res) => {
   const user = await validToken(req, res)
   if (user === null) return
 
-  const filter = user.role.name === "admin" ? {} : { deliveryman: user._id }
+  const filter = { status: { $ne: "done" }}
+  if (user.role.name === "admin") filter.deliveryman = user._id
 
   const items = await Delivery.aggregate()
     .match(filter)
@@ -32,6 +35,10 @@ router.get('/', async (req, res) => {
         products: { $size: "$products" }
     });
   res.json(items);
+});
+
+router.get('/statuses', async (req, res) => {
+  res.json(await Delivery_status.find());
 });
 
 router.get('/:id', async (req, res) => {
@@ -56,8 +63,16 @@ router.get('/:id', async (req, res) => {
           as: "product",
         }
       }, {
+        $lookup: {
+          from: "delivery_statuses",
+          localField: "delivery_status",
+          foreignField: "_id",
+          as: "delivery_status",
+        }
+      }, {
         $addFields: {
-          product: {$first: "$product"}
+          product: {$first: "$product"},
+          delivery_status: {$first: "$delivery_status"}
         }
       }]
     })
@@ -96,6 +111,40 @@ router.post('/join', upload.single('proof'), async (req, res) => {
   })
 
   res.json();
+});
+
+router.post('/:id/start', async (req, res) => {
+  const user = await validToken(req, res)
+  if (user === null) return
+
+  const item = await Delivery.findOneAndUpdate({
+    _id: req.params.id,
+    deliveryman: user._id,
+    status: undefined
+  }, {
+    status: 'ongoing'
+  })
+  if (item) {
+    await Product_request.updateMany({delivery: item._id}, {delivery_status: 1})
+  }
+  res.json(item);
+});
+
+router.post('/:id/end', async (req, res) => {
+  const user = await validToken(req, res)
+  if (user === null) return
+
+  const item = await Delivery.findOneAndUpdate({
+    _id: req.params.id,
+    deliveryman: user._id,
+    status: 'ongoing'
+  }, {
+    status: 'done'
+  })
+  if (item) {
+    await Product_request.updateMany({delivery: item._id, delivery_status: 1}, {delivery_status: 2})
+  }
+  res.json(item);
 });
 
 router.put('/:id', async (req, res) => {

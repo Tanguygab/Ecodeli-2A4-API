@@ -30,9 +30,7 @@ export async function validToken(request, response) {
             const decoded = jwt.verify(auth[1], process.env.JWT_SECRET || 'your-secret-key');
             user = await User.findOne({ _id: decoded.userId }).populate("role").populate("subscription");
             if (user !== null) return user;
-        } catch (err) {
-            console.error('JWT verification failed:', err);
-        }
+        } catch (err) {}
     }
     
     // OPTION 2: Si vous utilisez encore le système de token simple (à garder pour compatibilité)

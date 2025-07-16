@@ -326,13 +326,6 @@ router.post('/:id/buy', async (req, res) => {
     const location = await find(res, Location, req.body.location, "location.not-found");
     if (location === null) return;
 
-    // Récupérer le statut de livraison "pending"
-    const pendingStatus = await DeliveryStatus.findOne({ name: "pending" });
-    if (!pendingStatus) {
-      error(res, "delivery-status-not-found", 500);
-      return;
-    }
-
     const newId = await getLastId(ProductRequest) + 1;
     const item = await ProductRequest.create({
       _id: newId,
@@ -341,7 +334,6 @@ router.post('/:id/buy', async (req, res) => {
       receiver: user._id,
       product: product._id,
       amount: req.body.amount,
-      delivery_status: pendingStatus._id
     });
     
     // Retourner la demande avec toutes les relations peuplées
@@ -410,6 +402,18 @@ router.put('/requests/:id', async (req, res) => {
     console.error('Error updating product request:', err);
     error(res, "update-failed", 500);
   }
+});
+
+router.put('/requests/:id/status', async (req, res) => {
+  const user = await validToken(req, res);
+  if (user === null) return;
+
+  const item = await ProductRequest.findOneAndUpdate(
+    { _id: req.params.id },
+    { delivery_status: req.body.status },
+  );
+
+  res.json(item);
 });
 
 router.delete('/:id', async (req, res) => {
