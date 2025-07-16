@@ -4,7 +4,7 @@ import { isAuthenticated } from '../middleware/auth.js';
 
 const router = express.Router();
 
-
+// GET - Récupérer toutes les annonces
 router.get('/', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -25,28 +25,41 @@ router.get('/', async (req, res) => {
     }
 });
 
-
+// POST - Créer une nouvelle annonce (VALIDATION ASSOUPLIE)
 router.post('/', isAuthenticated, async (req, res) => {
     try {
         const { title, description, date, location } = req.body;
 
-        // Validation des données
-        if (!title || !description || !date || !location) {
+        // Validation assouplie - seuls title et description sont vraiment requis
+        if (!title || !description) {
             return res.status(400).json({ 
-                message: 'Tous les champs sont requis (title, description, date, location)' 
+                message: 'Le titre et la description sont requis' 
+            });
+        }
+
+        // Validation supplémentaire des types
+        if (typeof title !== 'string' || typeof description !== 'string') {
+            return res.status(400).json({ 
+                message: 'Le titre et la description doivent être des chaînes de caractères' 
+            });
+        }
+
+        // Validation de la longueur
+        if (title.trim().length === 0 || description.trim().length === 0) {
+            return res.status(400).json({ 
+                message: 'Le titre et la description ne peuvent pas être vides' 
             });
         }
 
         const annonce = new ClientAnnonce({
-            title,
-            description,
-            date: new Date(date),
-            location,
+            title: title.trim(),
+            description: description.trim(),
+            date: date ? new Date(date) : new Date(), // Date par défaut si vide
+            location: location && location.trim() ? location.trim() : 'Non spécifié', // Valeur par défaut si vide
             user: req.user._id 
         });
 
         await annonce.save();
-        
         await annonce.populate('user', 'firstname name');
 
         console.log('Annonce créée:', annonce);
@@ -57,7 +70,7 @@ router.post('/', isAuthenticated, async (req, res) => {
     }
 });
 
-
+// GET - Récupérer une annonce par ID
 router.get('/:id', async (req, res) => {
     try {
         const annonce = await ClientAnnonce.findById(req.params.id)
@@ -74,14 +87,28 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-
+// PUT - Mettre à jour une annonce
 router.put('/:id', isAuthenticated, async (req, res) => {
     try {
         const { title, description, date, location } = req.body;
 
+        // Validation assouplie pour la mise à jour
+        if (!title || !description) {
+            return res.status(400).json({ 
+                message: 'Le titre et la description sont requis' 
+            });
+        }
+
+        const updateData = {
+            title: title.trim(),
+            description: description.trim(),
+            date: date ? new Date(date) : new Date(),
+            location: location && location.trim() ? location.trim() : 'Non spécifié'
+        };
+
         const annonce = await ClientAnnonce.findOneAndUpdate(
             { _id: req.params.id, user: req.user._id },
-            { title, description, date: new Date(date), location },
+            updateData,
             { new: true }
         ).populate('user', 'firstname name');
 
