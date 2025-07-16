@@ -260,7 +260,7 @@ router.post('/requests/:id/accept', async (req, res) => {
 });
 
 // Route pour créer un produit (JSON uniquement, pour l'Android)
-router.post('/', async (req, res) => {
+router.post('/', upload.single('image'), async (req, res) => {
   const user = await validToken(req, res);
   if (user === null) return;
 
@@ -272,30 +272,7 @@ router.post('/', async (req, res) => {
     
     // Créer ou récupérer la location
     let locationId;
-    if (req.body.location && typeof req.body.location === 'object') {
-      const locationData = req.body.location;
-      
-      const existingLocation = await Location.findOne({
-        user: user._id,
-        city: locationData.city,
-        zipcode: locationData.zipcode,
-        address: locationData.address,
-      });
-      
-      if (existingLocation) {
-        locationId = existingLocation._id;
-      } else {
-        const newLocationId = await getLastId(Location) + 1;
-        const newLocation = await Location.create({
-          _id: newLocationId,
-          user: user._id,
-          city: locationData.city,
-          zipcode: locationData.zipcode,
-          address: locationData.address,
-        });
-        locationId = newLocation._id;
-      };
-    } else if (req.body.location) {
+    if (req.body.location) {
       locationId = parseInt(req.body.location);
       
       const location = await Location.findOne({ _id: locationId });
@@ -317,7 +294,12 @@ router.post('/', async (req, res) => {
       seller: user._id,
       location: locationId
     };
-    
+
+    if (req.file) {
+      productData.image = req.file.filename;
+    }
+
+
     const item = await Product.create(productData);
     console.log('Produit créé avec ID:', item._id);
     
@@ -325,60 +307,10 @@ router.post('/', async (req, res) => {
     const populatedItem = await populateUser(Product.findOne({ _id: item._id }), "seller")
       .populate('size')
       .populate('location');
-    
+
     res.json(populatedItem);
   } catch (err) {
     console.error('Error creating product:', err);
-    error(res, "creation-failed", 500);
-  }
-});
-
-// Route pour créer un produit avec image (Multipart, pour le web)
-router.post('/with-image', upload.single('image'), async (req, res) => {
-  const user = await validToken(req, res);
-  if (user === null) return;
-
-  try {
-    if (!req.body.name || !req.body.price) {
-      error(res, "missing-required-fields", 400);
-      return;
-    }
-    
-    if (!req.body.location) {
-      error(res, "location-required", 400);
-      return;
-    }
-    
-    // Vérifier que la location existe
-    const location = await Location.findOne({ _id: parseInt(req.body.location) });
-    if (!location) {
-      error(res, "location.not-found", 400);
-      return;
-    }
-    
-    const newId = await getLastId(Product) + 1;
-    const productData = {
-      _id: newId,
-      name: req.body.name,
-      price: parseFloat(req.body.price),
-      size: parseInt(req.body.size) || 2,
-      seller: user._id,
-      location: parseInt(req.body.location)
-    };
-    
-    if (req.file) {
-      productData.image = req.file.filename;
-    }
-    
-    const item = await Product.create(productData);
-    
-    const populatedItem = await populateUser(Product.findOne({ _id: item._id }), "seller")
-      .populate('size')
-      .populate('location');
-    
-    res.json(populatedItem);
-  } catch (err) {
-    console.error('Error creating product with image:', err);
     error(res, "creation-failed", 500);
   }
 });
