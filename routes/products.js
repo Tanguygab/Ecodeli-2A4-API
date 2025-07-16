@@ -514,4 +514,57 @@ router.delete('/requests/:id', async (req, res) => {
   }
 });
 
+// Route pour récupérer les produits créés par l'utilisateur connecté
+router.get('/my-products', async (req, res) => {
+  const user = await validToken(req, res);
+  if (user === null) return;
+
+  try {
+    console.log('Récupération des produits pour vendeur:', user._id);
+    
+    const products = await populateUser(Product.find({ seller: user._id }), "seller")
+      .populate('size')
+      .populate('location');
+    
+    console.log('Produits trouvés:', products.length);
+    res.json(products);
+  } catch (err) {
+    console.error('Error getting user products:', err);
+    error(res, "database-error", 500);
+  }
+});
+
+// Route pour récupérer les ventes (commandes sur mes produits)
+router.get('/my-sales', async (req, res) => {
+  const user = await validToken(req, res);
+  if (user === null) return;
+
+  try {
+    console.log('Récupération des ventes pour vendeur:', user._id);
+    
+    const sales = await ProductRequest.find()
+      .populate({
+        path: 'product',
+        match: { seller: user._id },
+        populate: [
+          { path: 'size' },
+          { path: 'seller', select: "_id firstname name email description join_date role" },
+          { path: 'location' }
+        ]
+      })
+      .populate('delivery_location')
+      .populate('delivery_status')
+      .populate('delivery')
+      .populate('receiver', '_id firstname name email');
+    
+    const filteredSales = sales.filter(sale => sale.product !== null);
+    
+    console.log('Ventes trouvées:', filteredSales.length);
+    res.json(filteredSales);
+  } catch (err) {
+    console.error('Error getting user sales:', err);
+    error(res, "database-error", 500);
+  }
+});
+
 export default router;
