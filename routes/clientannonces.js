@@ -1,6 +1,6 @@
 import express from 'express';
 import ClientAnnonce from '../models/clientannonces.js';
-import { isAuthenticated } from '../middleware/auth.js'; 
+import { isAuthenticated } from '../mmiddleware/auth.js'; 
 
 const router = express.Router();
 
